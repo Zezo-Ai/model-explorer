@@ -158,7 +158,7 @@ export function getNodeInfoFieldValue(
 
 /** Gets namespace display label. */
 export function getNamespaceLabel(node: ModelNode): string {
-  return node.savedNamespace || node.namespace || '<root>';
+  return node.fullNamespace || node.namespace || '<root>';
 }
 
 /** Generates unique id. */
@@ -171,6 +171,7 @@ export function getDeepestExpandedGroupNodeIds(
   root: GroupNode | undefined,
   modelGraph: ModelGraph,
   deepestExpandedGroupNodeIds: string[],
+  ignoreExpandedState = false,
 ) {
   let nsChildrenIds: string[] = [];
   if (root == null) {
@@ -183,10 +184,17 @@ export function getDeepestExpandedGroupNodeIds(
     if (!childNode) {
       continue;
     }
-    if (isGroupNode(childNode) && childNode.expanded) {
-      const isDeepest = (childNode.nsChildrenIds || [])
-        .filter((id) => isGroupNode(modelGraph.nodesById[id]))
-        .every((id) => !(modelGraph.nodesById[id] as GroupNode).expanded);
+    if (
+      isGroupNode(childNode) &&
+      (ignoreExpandedState || (!ignoreExpandedState && childNode.expanded))
+    ) {
+      const nsChildrenIds = childNode.nsChildrenIds || [];
+      const isDeepest = ignoreExpandedState
+        ? nsChildrenIds.filter((id) => isGroupNode(modelGraph.nodesById[id]))
+            .length === 0
+        : nsChildrenIds
+            .filter((id) => isGroupNode(modelGraph.nodesById[id]))
+            .every((id) => !(modelGraph.nodesById[id] as GroupNode).expanded);
       if (isDeepest) {
         deepestExpandedGroupNodeIds.push(childNode.id);
       }
@@ -194,6 +202,7 @@ export function getDeepestExpandedGroupNodeIds(
         childNode,
         modelGraph,
         deepestExpandedGroupNodeIds,
+        ignoreExpandedState,
       );
     }
   }
@@ -770,6 +779,7 @@ export function getAttributesFromNode(
     attrs = {
       '#descendants': `${(node.descendantsNodeIds || []).length}`,
       '#children': `${(node.nsChildrenIds || []).length}`,
+      'namespace': node.namespace || node.savedNamespace || '<root>',
     };
     const customAttrs =
       modelGraph.groupNodeAttributes?.[node.id.replace('___group___', '')] ||

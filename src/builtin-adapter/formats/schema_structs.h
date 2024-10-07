@@ -1,21 +1,22 @@
-/* Copyright 2024 The Model Explorer Authors. All Rights Reserved.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-==============================================================================*/
+// Copyright 2024 The AI Edge Model Explorer Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// =============================================================================
 
 #ifndef TENSORFLOW_COMPILER_MLIR_LITE_EXPERIMENTAL_GOOGLE_TOOLING_FORMATS_SCHEMA_STRUCTS_H_
 #define TENSORFLOW_COMPILER_MLIR_LITE_EXPERIMENTAL_GOOGLE_TOOLING_FORMATS_SCHEMA_STRUCTS_H_
 
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -64,6 +65,17 @@ struct GraphEdge {
   static const char kEdgeMetadata[];
 };
 
+// Configuration for a graph node.
+struct GraphNodeConfig {
+  // Whether to pin the node to the top of the group it belongs to.
+  bool pin_to_group_top = false;
+
+  llvm::json::Object Json();
+
+ private:
+  static const char kPinToGroupTop[];
+};
+
 struct GraphNode {
   std::string node_id;
   std::string node_label;
@@ -73,6 +85,7 @@ struct GraphNode {
   std::vector<GraphEdge> incoming_edges;
   std::vector<Metadata> inputs_metadata;
   std::vector<Metadata> outputs_metadata;
+  std::optional<GraphNodeConfig> config;
 
   llvm::json::Object Json();
 
@@ -85,6 +98,7 @@ struct GraphNode {
   static const char kIncomingEdges[];
   static const char kInputsMetadata[];
   static const char kOutputsMetadata[];
+  static const char kConfig[];
 };
 
 struct Subgraph {

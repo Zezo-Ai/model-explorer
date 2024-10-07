@@ -68,6 +68,7 @@ self.addEventListener('message', (event: Event) => {
         workerEvent.groupNodeChildrenCountThreshold,
         workerEvent.flattenLayers,
         workerEvent.keepLayersWithASingleChild,
+        workerEvent.initialLayout,
       );
       cacheModelGraph(modelGraph, workerEvent.paneId);
       const resp: ProcessGraphResponse = {
@@ -160,6 +161,7 @@ self.addEventListener('message', (event: Event) => {
           workerEvent.forRestoringSnapshotAfterTogglingFlattenLayers,
         targetDeepestGroupNodeIdsToExpand:
           workerEvent.targetDeepestGroupNodeIdsToExpand,
+        triggerNavigationSync: workerEvent.triggerNavigationSync,
       };
       postMessage(resp);
       break;
@@ -206,6 +208,7 @@ function handleProcessGraph(
   groupNodeChildrenCountThreshold?: number,
   flattenLayers?: boolean,
   keepLayersWithASingleChild?: boolean,
+  initialLayout?: boolean,
 ): ModelGraph {
   let error: string | undefined = undefined;
 
@@ -231,7 +234,7 @@ function handleProcessGraph(
   }
 
   // Do the initial layout.
-  if (!error) {
+  if (!error && initialLayout) {
     const layout = new GraphLayout(
       modelGraph,
       dagre,

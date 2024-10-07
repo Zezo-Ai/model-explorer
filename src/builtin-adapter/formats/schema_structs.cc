@@ -1,17 +1,17 @@
-/* Copyright 2024 The Model Explorer Authors. All Rights Reserved.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-==============================================================================*/
+// Copyright 2024 The AI Edge Model Explorer Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// =============================================================================
 
 #include "formats/schema_structs.h"
 
@@ -64,6 +64,14 @@ llvm::json::Object GraphEdge::Json() {
   return json_edge;
 }
 
+const char GraphNodeConfig::kPinToGroupTop[] = "pinToGroupTop";
+
+llvm::json::Object GraphNodeConfig::Json() {
+  llvm::json::Object json_config;
+  json_config[kPinToGroupTop] = pin_to_group_top;
+  return json_config;
+}
+
 const char GraphNode::kNodeId[] = "id";
 const char GraphNode::kNodeLabel[] = "label";
 const char GraphNode::kNodeName[] = "namespace";
@@ -72,6 +80,7 @@ const char GraphNode::kNodeAttrs[] = "attrs";
 const char GraphNode::kIncomingEdges[] = "incomingEdges";
 const char GraphNode::kInputsMetadata[] = "inputsMetadata";
 const char GraphNode::kOutputsMetadata[] = "outputsMetadata";
+const char GraphNode::kConfig[] = "config";
 
 llvm::json::Object GraphNode::Json() {
   llvm::json::Object json_node;
@@ -105,6 +114,11 @@ llvm::json::Object GraphNode::Json() {
   for (Metadata& metadata : outputs_metadata) {
     json_outputs_metadata->push_back(metadata.Json());
   }
+
+  if (config.has_value()) {  // Only add config if it exists
+    json_node[kConfig] = config->Json();
+  }
+
   return json_node;
 }
 

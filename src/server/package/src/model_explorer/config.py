@@ -24,8 +24,7 @@ from typing_extensions import NotRequired
 
 from .consts import DEFAULT_HOST, DEFAULT_SETTINGS
 from .node_data_builder import NodeData
-from .pytorch_exported_program_adater_impl import \
-    PytorchExportedProgramAdapterImpl
+from .pytorch_exported_program_adater_impl import PytorchExportedProgramAdapterImpl
 from .types import ModelExplorerGraphs
 
 ModelSource = TypedDict(
@@ -34,9 +33,11 @@ ModelSource = TypedDict(
 
 EncodedUrlData = TypedDict(
     'EncodedUrlData',
-    {'models': list[ModelSource],
-     'nodeData': NotRequired[list[str]],
-     'nodeDataTargets': NotRequired[list[str]]},
+    {
+        'models': list[ModelSource],
+        'nodeData': NotRequired[list[str]],
+        'nodeDataTargets': NotRequired[list[str]],
+    },
 )
 
 
@@ -50,7 +51,7 @@ class ModelExplorerConfig:
     # List of model names to apply node data to. For the meaning of
     # "model name", see comments in `add_node_data_from_path` method below.
     self.node_data_target_models: list[str] = []
-    self.node_data_list: list[NodeData] = []
+    self.node_data_list: list[Union[NodeData, str]] = []
     self.reuse_server_host = ''
     self.reuse_server_port = -1
 
@@ -105,9 +106,8 @@ class ModelExplorerConfig:
     return self
 
   def add_node_data_from_path(
-          self,
-          path: str,
-          model_name: Union[str, None] = None) -> 'ModelExplorerConfig':
+      self, path: str, model_name: Union[str, None] = None
+  ) -> 'ModelExplorerConfig':
     """Adds node data file to the config.
 
     Args:
@@ -134,14 +134,14 @@ class ModelExplorerConfig:
   def add_node_data(
       self,
       name: str,
-      node_data: NodeData,
-      model_name: Union[str, None] = None
+      node_data: Union[NodeData, str],
+      model_name: Union[str, None] = None,
   ) -> 'ModelExplorerConfig':
     """Adds the given node data object.
 
     Args:
       name: the name of the NodeData for display purpose.
-      node_data: the NodeData object to add.
+      node_data: the NodeData object or node data json string to add.
       model_name: the name of the model. If not set, the node data will be
           applied to the first model added to the config by default.
 
@@ -164,9 +164,11 @@ class ModelExplorerConfig:
       self.node_data_target_models.append(model_name)
     return self
 
-  def set_reuse_server(self,
-                       server_host: str = DEFAULT_HOST,
-                       server_port: Union[int, None] = None):
+  def set_reuse_server(
+      self,
+      server_host: str = DEFAULT_HOST,
+      server_port: Union[int, None] = None,
+  ):
     """Makes it to reuse the existing server instead of starting a new one.
 
     Args:
@@ -184,10 +186,11 @@ class ModelExplorerConfig:
 
     if self.reuse_server_port > 0:
       print(
-          f'Re-using running server at http://{self.reuse_server_host}:{self.reuse_server_port}')
+          'Re-using running server at'
+          f' http://{self.reuse_server_host}:{self.reuse_server_port}'
+      )
     else:
-      print(
-          f'No running server found. Will start a new server.')
+      print(f'No running server found. Will start a new server.')
 
     return self
 
@@ -207,7 +210,7 @@ class ModelExplorerConfig:
   def get_model_explorer_graphs(self, index: int) -> ModelExplorerGraphs:
     return self.graphs_list[index]
 
-  def get_node_data(self, index: int) -> NodeData:
+  def get_node_data(self, index: int) -> Union[NodeData, str]:
     return self.node_data_list[index]
 
   def has_data_to_encode_in_url(self) -> bool:

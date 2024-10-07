@@ -44,6 +44,8 @@ import {
   ModelGraphProcessedEvent,
   NodeDataProviderData,
   NodeDataProviderGraphData,
+  NodeInfo,
+  SyncNavigationModeChangedEvent,
 } from './common/types';
 import {genUid, inInputElement, isOpNode} from './common/utils';
 import {type VisualizerConfig} from './common/visualizer_config';
@@ -52,6 +54,7 @@ import {ExtensionService} from './extension_service';
 import {NodeDataProviderExtensionService} from './node_data_provider_extension_service';
 import {NodeStylerService} from './node_styler_service';
 import {SplitPanesContainer} from './split_panes_container';
+import {SyncNavigationService} from './sync_navigation_service';
 import {ThreejsService} from './threejs_service';
 import {TitleBar} from './title_bar';
 import {UiStateService} from './ui_state_service';
@@ -69,6 +72,7 @@ import {WorkerService} from './worker_service';
     ExtensionService,
     NodeDataProviderExtensionService,
     NodeStylerService,
+    SyncNavigationService,
     UiStateService,
     WorkerService,
   ],
@@ -108,6 +112,19 @@ export class ModelGraphVisualizer implements OnInit, OnDestroy, OnChanges {
   /** Triggered when a remote node data paths are updated. */
   @Output() readonly remoteNodeDataPathsChanged = new EventEmitter<string[]>();
 
+  /** Triggered when the sync navigation mode is changed. */
+  @Output() readonly syncNavigationModeChanged =
+    new EventEmitter<SyncNavigationModeChangedEvent>();
+
+  /** Triggered when the selected node is changed. */
+  @Output() readonly selectedNodeChanged = new EventEmitter<NodeInfo>();
+
+  /** Triggered when the hovered node is changed. */
+  @Output() readonly hoveredNodeChanged = new EventEmitter<NodeInfo>();
+
+  /** Triggered when the double clicked node is changed. */
+  @Output() readonly doubleClickedNodeChanged = new EventEmitter<NodeInfo>();
+
   curProcessedModelGraph?: ModelGraph;
   ready = false;
 
@@ -130,7 +147,9 @@ export class ModelGraphVisualizer implements OnInit, OnDestroy, OnChanges {
     private readonly uiStateService: UiStateService,
     private readonly nodeDataProviderExtensionService: NodeDataProviderExtensionService,
     private readonly nodeStylerService: NodeStylerService,
+    readonly syncNavigationService: SyncNavigationService,
   ) {
+
     effect(() => {
       const curUiState = this.uiStateService.curUiState();
       if (!curUiState) {
@@ -143,6 +162,18 @@ export class ModelGraphVisualizer implements OnInit, OnDestroy, OnChanges {
       this.remoteNodeDataPathsChanged.emit(
         this.appService.remoteNodeDataPaths(),
       );
+    });
+
+    effect(() => {
+      this.selectedNodeChanged.emit(this.appService.selectedNode());
+    });
+
+    effect(() => {
+      this.hoveredNodeChanged.emit(this.appService.hoveredNode());
+    });
+
+    effect(() => {
+      this.doubleClickedNodeChanged.emit(this.appService.doubleClickedNode());
     });
 
     // Listen to postMessage.
@@ -178,6 +209,12 @@ export class ModelGraphVisualizer implements OnInit, OnDestroy, OnChanges {
         this.modelGraphProcessed.next(event);
       });
 
+    this.syncNavigationService.syncNavigationModeChanged$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((event) => {
+        this.syncNavigationModeChanged.next(event);
+      });
+
     this.initThreejs();
   }
 
@@ -211,6 +248,9 @@ export class ModelGraphVisualizer implements OnInit, OnDestroy, OnChanges {
       // One pane.
       if (this.initialUiState.paneStates.length === 1) {
         const paneState = this.initialUiState.paneStates[0];
+        const initialLayout =
+          paneState.selectedNodeId === '' &&
+          paneState.deepestExpandedGroupNodeIds.length === 0;
         const selectedGraph = this.findGraphFromCollections(
           paneState.selectedCollectionLabel,
           paneState.selectedGraphId,
@@ -220,11 +260,18 @@ export class ModelGraphVisualizer implements OnInit, OnDestroy, OnChanges {
           this.appService.selectGraphInCurrentPane(
             selectedGraph,
             flattenLayers,
+            undefined,
+            initialLayout,
           );
         } else {
           // Fall back to first graph.
           const firstGraph = this.graphCollections[0].graphs[0];
-          this.appService.selectGraphInCurrentPane(firstGraph, flattenLayers);
+          this.appService.selectGraphInCurrentPane(
+            firstGraph,
+            flattenLayers,
+            undefined,
+            initialLayout,
+          );
         }
         this.appService.setFlattenLayersInCurrentPane(flattenLayers);
       }

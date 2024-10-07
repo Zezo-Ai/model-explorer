@@ -51,7 +51,10 @@ import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 import {MatSelectModule} from '@angular/material/select';
 import {MatTooltipModule} from '@angular/material/tooltip';
 
-import {GRAPHS_MODEL_SOURCE_PREFIX} from '../../common/consts';
+import {
+  DATA_NEXUS_MODEL_SOURCE_PREFIX,
+  GRAPHS_MODEL_SOURCE_PREFIX,
+} from '../../common/consts';
 import {IS_EXTERNAL} from '../../common/flags';
 import {type ModelLoaderServiceInterface} from '../../common/model_loader_service_interface';
 import {
@@ -60,7 +63,11 @@ import {
   ModelItemStatus,
   ModelItemType,
 } from '../../common/types';
-import {isInternalStoragePath} from '../../common/utils';
+import {
+  getElectronApi,
+  INTERNAL_COLAB,
+  isInternalStoragePath,
+} from '../../common/utils';
 import {AdapterExtensionService} from '../../services/adapter_extension_service';
 import {ModelSource, UrlService} from '../../services/url_service';
 import {Bubble} from '../bubble/bubble';
@@ -137,6 +144,7 @@ export class ModelSourceInput {
 
   readonly loading = signal<boolean>(false);
   readonly hasUploadedModels = signal<boolean>(false);
+  readonly internalColab = INTERNAL_COLAB;
 
   private portal: ComponentPortal<AdapterSelectorPanel> | null = null;
 
@@ -180,6 +188,21 @@ export class ModelSourceInput {
           type: ModelItemType.GRAPH_JSONS_FROM_SERVER,
           status: signal<ModelItemStatus>(ModelItemStatus.NOT_STARTED),
           selected: adapterCandidates.length > 0,
+          adapterCandidates,
+          selectedAdapter: ext,
+        };
+      }
+      // Data nexus model source.
+      else if (modelSource.url.startsWith(DATA_NEXUS_MODEL_SOURCE_PREFIX)) {
+        const ext = this.adapterExtensionService.getExtensionById(
+          InternalAdapterExtId.DATA_NEXUS,
+        );
+        const adapterCandidates = ext == null ? [] : [ext];
+        return {
+          path: modelSource.url,
+          type: ModelItemType.DATA_NEXUS,
+          status: signal<ModelItemStatus>(ModelItemStatus.NOT_STARTED),
+          selected: true,
           adapterCandidates,
           selectedAdapter: ext,
         };
@@ -383,22 +406,47 @@ export class ModelSourceInput {
     const modelItems: ModelItem[] = [];
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
+      const meElectronApi = getElectronApi();
+      let filePath = '';
+      // When running in electron app, a `pathForFile` api is exposed from its
+      // preload script to the renderer process (here) that can be used to get
+      // the absolute path of a file.
+      if (meElectronApi) {
+        const pathForFileFn = meElectronApi['pathForFile'];
+        filePath = pathForFileFn?.(file) || '';
+      }
       const adapterCandidates = getAdapterCandidates(
         file.name,
         this.adapterExtensionService,
         IS_EXTERNAL,
       );
-      modelItems.push({
-        path: file.name,
-        type: ModelItemType.LOCAL,
-        status: signal<ModelItemStatus>(ModelItemStatus.NOT_STARTED),
-        selected: adapterCandidates.length > 0,
-        file,
-        adapterCandidates,
-        // TODO: store the adapter selection in local storage and load it here.
-        selectedAdapter:
-          adapterCandidates.length > 0 ? adapterCandidates[0] : undefined,
-      });
+      if (filePath !== '') {
+        modelItems.push({
+          path: filePath,
+          type: this.isInternal
+            ? ModelItemType.REMOTE
+            : ModelItemType.FILE_PATH,
+          status: signal<ModelItemStatus>(ModelItemStatus.NOT_STARTED),
+          selected: adapterCandidates.length > 0,
+          adapterCandidates,
+          // TODO: store the adapter selection in local storage and load
+          // it here.
+          selectedAdapter:
+            adapterCandidates.length > 0 ? adapterCandidates[0] : undefined,
+        });
+      } else {
+        modelItems.push({
+          path: file.name,
+          type: ModelItemType.LOCAL,
+          status: signal<ModelItemStatus>(ModelItemStatus.NOT_STARTED),
+          selected: adapterCandidates.length > 0,
+          file,
+          adapterCandidates,
+          // TODO: store the adapter selection in local storage and load it here.
+          selectedAdapter:
+            adapterCandidates.length > 0 ? adapterCandidates[0] : undefined,
+        });
+      }
     }
     this.addModelItems(modelItems);
   }

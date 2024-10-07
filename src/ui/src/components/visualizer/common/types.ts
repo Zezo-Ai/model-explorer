@@ -16,7 +16,8 @@
  * ==============================================================================
  */
 
-import {GroupNode, ModelGraph} from './model_graph';
+import {GroupNode, ModelGraph, ModelNode} from './model_graph';
+import {SyncNavigationMode} from './sync_navigation';
 
 /** A type for key-value pairs. */
 export type KeyValuePairs = Record<string, string>;
@@ -170,6 +171,7 @@ export interface SelectedNodeInfo {
   rendererId: string;
   isGroupNode: boolean;
   noNodeShake?: boolean;
+  triggerNavigationSync?: boolean;
 }
 
 /** Info about a node to locate. */
@@ -224,6 +226,14 @@ export interface DownloadAsPngInfo {
 export declare interface NodeDataProviderRunInfo {
   runId: string;
   runName: string;
+}
+
+/** Info of a node when hovered or double clicked. */
+export declare interface NodeInfo {
+  nodeId: string;
+  graphId: string;
+  collectionLabel: string;
+  node?: ModelNode;
 }
 
 /** Node data provider data for a single graph. */
@@ -649,4 +659,16 @@ export enum SearchNodeType {
 export declare interface SerializedStyle {
   id: NodeStyleId;
   value: string;
+}
+
+/** Response from reading a file. */
+export declare interface ReadFileResp {
+  content: string;
+}
+
+/** Event for sync navigation mode change. */
+export declare interface SyncNavigationModeChangedEvent {
+  mode: SyncNavigationMode;
+  // Used when mode is LOAD_MAPPING_FROM_CNS.
+  cnsPath?: string;
 }
